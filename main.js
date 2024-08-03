@@ -5,6 +5,12 @@ document.querySelector("#app").innerHTML = `
 	<div id="mediaWrapper"></div>
 	<div id="buttonWrapper">
     <select id="recordOptions">
+      <option value="screenOnly">
+        Record Screen Only
+      </option>
+      <option value="webcamOnly">
+        Record Webcam Only
+      </option>
       <option value="both" selected>
         Record Both Webcam and Screen
       </option>
@@ -207,6 +213,24 @@ const handleRecord = async () => {
         );
       }
     );
+  } else if (recordOption === "webcamOnly") {
+    startWebcam().then((camStream) => {
+      localCamStream = camStream;
+
+      console.log(camStream);
+
+      overlay = createVideoElement("pipOverlayStream", localCamStream);
+      overlay.volume = 0;
+      mediaWrapperDiv.appendChild(overlay);
+      mediaRecorder = new MediaRecorder(localCamStream, encoderOptions);
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
+          download(recordedChunks);
+        }
+      };
+    });
+  } else {
   }
 };
 
