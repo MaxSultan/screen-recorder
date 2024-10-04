@@ -13,6 +13,7 @@ Basic goal (2 hours):
   [X] recording can be downloaded
   [X] recording can be previewed while recording
   [] recording can be previewed after recording
+  [] history of recordings
 
 Basic Goal #2
 

@@ -1,16 +1,19 @@
 import "./style.css";
 
+{
+  /* <option value="screenOnly">
+        Record Screen Only
+      </option>
+      <option value="webcamOnly">
+        Record Webcam Only
+      </option> */
+}
+
 document.querySelector("#app").innerHTML = `
   <main>
 	<div id="mediaWrapper"></div>
 	<div id="buttonWrapper">
     <select id="recordOptions">
-      <option value="screenOnly">
-        Record Screen Only
-      </option>
-      <option value="webcamOnly">
-        Record Webcam Only
-      </option>
       <option value="both" selected>
         Record Both Webcam and Screen
       </option>
@@ -18,9 +21,10 @@ document.querySelector("#app").innerHTML = `
     <button id="record">
       <div></div>
     </button>
-		<button id="stopRecording" title="Stop Recording and Download Resulting Stream">Stop Recording and Download Resulting Stream</button>
-		<button id="stopAllStreams" title="Stop All Streams">Stop All Streams</button>
+		<button id="stopRecording" title="Stop Recording"><div></div></button>
 	</div>
+  <div id="history">
+  </div>
 </main>
 `;
 
@@ -35,12 +39,12 @@ let localCamStream,
   overlay;
 let mediaWrapperDiv = document.getElementById("mediaWrapper");
 let stopRecordingBtn = document.getElementById("stopRecording");
-let stopAllStreamsBtn = document.getElementById("stopAllStreams");
 let canvasElement = document.createElement("canvas");
 let canvasCtx = canvasElement.getContext("2d");
 let encoderOptions = { mimeType: "video/webm; codecs=vp9" };
 let recordedChunks = [];
 
+const historyElement = document.getElementById("history");
 const recordButton = document.getElementById("record");
 
 //#endregion constants
@@ -63,6 +67,19 @@ const requestVideoFrame = function (callback) {
  */
 const cancelVideoFrame = (id) => {
   clearTimeout(id);
+};
+
+const addLink = (blobData) => {
+  var blob = new Blob(blobData, {
+    type: "video/webm",
+  });
+  const date = new Date().toISOString();
+  var url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `recording-${date}.webm`;
+  link.innerText = date;
+  historyElement.appendChild(link);
 };
 
 const createVideoElement = (id, stream) => {
@@ -94,6 +111,7 @@ const stopAllStreams = () => {
     ...(localScreenStream ? localScreenStream.getTracks() : []),
     ...(localOverlayStream ? localOverlayStream.getTracks() : []),
   ].map((track) => track.stop());
+
   localCamStream = null;
   localScreenStream = null;
   localOverlayStream = null;
@@ -103,11 +121,13 @@ const stopAllStreams = () => {
 
 const makeComposite = (videoCamElement, videoScreenElement) => () => {
   // Theres an issue in here where these videos have no width and height so the canvas has no width and height
+  // get the aspect ratio of what we are recording
   if (videoCamElement && videoScreenElement) {
     console.log(videoScreenElement.videoHeight, videoScreenElement.videoWidth);
     canvasCtx.save();
     canvasElement.setAttribute("width", `${500}px`);
     canvasElement.setAttribute("height", `${500}px`);
+
     canvasCtx.clearRect(0, 0, 500, 500);
     canvasCtx.drawImage(videoScreenElement, 0, 0, 500, 500);
 
@@ -169,9 +189,12 @@ const mergeStreams = async (localCamStream, localScreenStream) => {
     mediaWrapperDiv.appendChild(overlay);
     mediaRecorder = new MediaRecorder(fullOverlayStream, encoderOptions);
     mediaRecorder.ondataavailable = (event) => {
+      console.log("data available");
       if (event.data.size > 0) {
         recordedChunks.push(event.data);
-        download(recordedChunks);
+        // download(recordedChunks);
+        addLink(recordedChunks);
+        recordedChunks = [];
       }
     };
   }
@@ -179,7 +202,6 @@ const mergeStreams = async (localCamStream, localScreenStream) => {
 
 const startRecording = () => {
   mediaRecorder.start();
-  // document.getElementById("pipOverlayStream").style.border = "2px solid red";
 };
 
 const download = (blobData) => {
@@ -234,7 +256,6 @@ const handleRecord = async () => {
   }
 };
 
-stopAllStreamsBtn.addEventListener("click", stopAllStreams);
 stopRecordingBtn.addEventListener("click", stopRecording);
 
 recordButton.addEventListener("click", handleRecord);
